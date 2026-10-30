@@ -1,3 +1,5 @@
+![Banner](banner.png)
+
 # misconfig-ConfigDriftDetector
 Detects unexpected configuration changes across environments (e.g., dev, prod) using SHA-256 hashing and alerts on discrepancies. Can compare live systems or configuration files. - Focused on Check for misconfigurations in configuration files or infrastructure definitions
 
