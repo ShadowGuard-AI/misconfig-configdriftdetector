@@ -1,11 +1,10 @@
 import argparse
+import fnmatch
 import hashlib
 import logging
 import os
 import subprocess
 import sys
-import yaml
-import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -80,8 +79,14 @@ def process_file(filepath, use_yamllint=False, use_jsonlint=False):
 
         return calculate_sha256_hash(filepath)
 
-    except FileNotFoundError:
-         logging.error(f"File not found: {filepath}")
+    except FileNotFoundError as e:
+         # A missing linter binary raises here, and the thing missing is the
+         # binary named by the exception, not the configuration file.
+         missing = e.filename
+         if missing in ('yamllint', 'jsonlint'):
+             logging.error(f"{missing} not found. Please ensure {missing} is installed and in your PATH. File not hashed: {filepath}")
+         else:
+             logging.error(f"File not found: {filepath}")
          return None
     except Exception as e:
         logging.error(f"Error processing file {filepath}: {e}")
@@ -101,7 +106,10 @@ def process_directory(directory, file_types, recursive=False, ignore_patterns=No
         use_jsonlint (bool): Whether to run jsonlint on JSON files.
 
     Returns:
-        dict: A dictionary where keys are filepaths and values are their SHA-256 hashes.
+        dict: A dictionary where keys are paths relative to the directory
+        given here and values are their SHA-256 hashes. Keying by the
+        relative path is what lets the same file in two environments at
+        different locations share a key and actually be compared.
     """
     hashes = {}
     ignore_patterns = ignore_patterns or []
@@ -110,15 +118,18 @@ def process_directory(directory, file_types, recursive=False, ignore_patterns=No
         for filename in files:
             if any(filename.endswith(ft) for ft in file_types):
                 filepath = os.path.join(root, filename)
+                relative_path = os.path.relpath(filepath, directory)
 
-                # Check if file should be ignored
-                if any(pattern in filepath for pattern in ignore_patterns):
+                # Ignore patterns are globs, matched against the file name,
+                # the relative path, and the full path.
+                if any(fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(relative_path, pattern)
+                       or fnmatch.fnmatch(filepath, pattern) for pattern in ignore_patterns):
                     logging.info(f"Ignoring file: {filepath}")
                     continue  # Skip to the next file
 
                 file_hash = process_file(filepath, use_yamllint, use_jsonlint)
                 if file_hash:
-                    hashes[filepath] = file_hash
+                    hashes[relative_path] = file_hash
 
         if not recursive:
             break  # Only process the top-level directory
@@ -145,16 +156,24 @@ def main():
     for config_path, env_name in zip(args.config_files, args.environments):
         environment_hashes[env_name] = {}
         if os.path.isfile(config_path):
-            # process single file
+            # process single file, keyed by its bare file name so the same
+            # file at a different path in another environment shares the key
             file_hash = process_file(config_path, args.use_yamllint, args.use_jsonlint)
             if file_hash:
-                environment_hashes[env_name][config_path] = file_hash
+                environment_hashes[env_name][os.path.basename(config_path)] = file_hash
         elif os.path.isdir(config_path):
             environment_hashes[env_name] = process_directory(config_path, args.file_types, args.recursive, args.ignore_patterns, args.use_yamllint, args.use_jsonlint)
         else:
             logging.error(f"Invalid config path: {config_path}.  Must be a file or directory.")
             sys.exit(1)
 
+
+    for env_name, env_hashes in environment_hashes.items():
+        logging.info(f"Hashed {len(env_hashes)} file(s) for environment {env_name}.")
+
+    if sum(len(env_hashes) for env_hashes in environment_hashes.values()) == 0:
+        logging.error("No files were hashed for any environment. Nothing was compared.")
+        sys.exit(1)
 
     # Compare hashes across environments
     all_files = set()
@@ -167,8 +186,10 @@ def main():
         for env_name, env_hashes in environment_hashes.items():
             hashes[env_name] = env_hashes.get(filepath)
 
-        # Check if hash exists in all environments, if not log a warning
+        # Check if hash exists in all environments, if not log a warning.
+        # A file missing from an environment is itself drift.
         if None in hashes.values():
+            drift_detected = True
             for env, hash_value in hashes.items():
                 if hash_value is None:
                     logging.warning(f"File {filepath} not found in environment {env}")
@@ -183,6 +204,9 @@ def main():
                                   f"Hash: {hash_value}, expected: {first_hash}")
                     drift_detected = True
 
+
+    if drift_detected:
+        sys.exit(1)
 
     if not drift_detected:
         logging.info("No configuration drift detected.")
