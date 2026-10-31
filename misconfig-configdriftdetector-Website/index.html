@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Misconfig Configdriftdetector: what it is, how it runs, where it stops</title>
+<meta name="description" content="Misconfig Configdriftdetector is one of my projects. The README in the repo is short, so this page sticks to what the files themselves show.">
+<style>
+:root {
+  --bg: #0e2a22; --panel: #14382d; --ink: #eef0e2;
+  --mut: #1b4b3c;
+  --acc: #f4d06f; --acc2: #ec8a7a;
+  --line: #14382d;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font-family: 'Palatino Linotype', Palatino, serif; line-height: 1.55; }
+code, pre, .mono { font-family: 'Menlo', monospace; }
+a { color: var(--acc2); }
+.hero { padding: 3rem 6vw 1rem; }
+.hero img.banner { width: 100%; height: auto; border: 1px solid var(--line);
+  border-radius: 10px; }
+.logo { width: 92px; height: 92px; border-radius: 18px;
+  border: 1px solid var(--line); }
+h1 { font-size: 2.4rem; margin: 0.4em 0 0.1em; }
+h2 { border-bottom: 2px solid var(--acc); padding-bottom: 0.2em;
+  margin-top: 2em; }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+main { padding: 0 6vw 3rem; max-width: 1180px; margin: 0 auto; }
+.grid { display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 1rem 1.2rem; }
+.card.pop { animation: rise 0.7s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; } }
+pre.code { background: #101014; color: #e8e6df; padding: 1rem 1.2rem;
+  border-radius: 12px; overflow-x: auto; font-size: 0.86rem;
+  border-left: 5px solid var(--acc); }
+table { border-collapse: collapse; width: 100%; }
+td, th { border-bottom: 1px solid var(--line); padding: 0.45rem 0.6rem;
+  text-align: left; }
+.shots { display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.shots img { width: 100%; height: auto; border: 1px solid var(--line);
+  border-radius: 10px; background: #f4f1e8; }
+footer { padding: 2rem 6vw; border-top: 1px solid var(--line);
+  color: var(--mut); }
+.rail { display: flex; gap: 1.2rem; align-items: flex-start; }
+.rail nav { position: sticky; top: 1rem; min-width: 180px; }
+@media (max-width: 760px) { .rail { flex-direction: column; }
+  .rail nav { position: static; } }
+@media (prefers-reduced-motion: reduce) {
+  .card.pop { animation: none; } * { scroll-behavior: auto; } }
+</style>
+</head>
+<body class="layout-rail">
+<!-- This page exists for misconfig-configdriftdetector alone: the layout (sidebar-rail),
+     the colors, and the type were picked for this project, not
+     shared with the other project pages. The code block below is
+     copied from the file it names, line for line. If it looks
+     plain, that is because the project is plain, and I would
+     rather the page match the project than dress it up. The one
+     thing I will not do here is oversell: what this project does
+     not do is stated on the page, not hidden from it. -->
+<header class="hero">
+  <img class="logo" src="assets/logo.png" alt="Misconfig Configdriftdetector logo">
+  <img class="banner" src="assets/banner.png" alt="">
+  <h1>Misconfig Configdriftdetector</h1>
+  <p class="mono"><a href="https://github.com/ShadowGuard-AI/misconfig-configdriftdetector">github.com/ShadowGuard-AI/misconfig-configdriftdetector</a></p>
+</header>
+
+<main>
+  <section class="rail">
+    <nav aria-label="on this page">
+      <p class="mono"><a href="#run">Run it</a><br>
+      <a href="#files">The files</a><br>
+      <a href="#sheets">The sheets</a><br>
+      <a href="https://github.com/ShadowGuard-AI/misconfig-configdriftdetector">The repo</a></p>
+    </nav>
+    <div>
+      <p class="lede">Misconfig Configdriftdetector is one of my projects. The README in the repo is short, so this page sticks to what the files themselves show.</p>
+      <div class="grid">
+        <div class="card pop"><h3>What it is</h3>
+          <p>Misconfig Configdriftdetector: 5 files, 226 counted
+          lines across Python 202, Markdown 23, Text 1. One job, done in the
+          open, in files you can read.</p></div>
+        <div class="card pop"><h3>The biggest piece</h3>
+          <p><code>main.py</code> carries the most
+          lines. If the project grows, that file is where the growth
+          lands first, for better or worse.</p></div>
+        <div class="card pop"><h3>The honest gap</h3>
+          <p>No test files yet. That is the honest gap, and the roadmap in the visuals folder says what the first one should cover.</p></div>
+      </div>
+      <section id="run">
+        <h2>Run it</h2>
+        <p>The repo README has the exact commands for this one. The
+        shape is the shape for most of my projects: clone it, read the
+        top file first so you know what will happen, then run it on
+        something you do not mind breaking.</p>
+        <p class="mono">$ git clone https://github.com/ShadowGuard-AI/misconfig-configdriftdetector.git<br>$ cd misconfig-configdriftdetector</p>
+      </section>
+      
+  <section aria-label="real code">
+    <h2>The code, as it sits in the repo</h2>
+    <p>From <code>main.py</code>, line 11 on. I did
+    not tidy it for the page. What you see is what the file has.</p>
+    <pre class="code"><code>logging.basicConfig(level=logging.INFO, format=&#x27;%(asctime)s - %(levelname)s - %(message)s&#x27;)
+
+def setup_argparse():
+    &quot;&quot;&quot;
+    Sets up the argument parser for the CLI.
+    Returns:
+        argparse.ArgumentParser: The argument parser object.
+    &quot;&quot;&quot;
+    parser = argparse.ArgumentParser(description=&#x27;Detects configuration drift across environments using SHA-256 hashing.&#x27;)
+    parser.add_argument(&#x27;config_files&#x27;, nargs=&#x27;+&#x27;, help=&#x27;Path(s) to the configuration files or directories to compare.&#x27;)
+    parser.add_argument(&#x27;-e&#x27;, &#x27;--environments&#x27;, nargs=&#x27;+&#x27;, help=&#x27;Names of the environments corresponding to the config files (e.g., dev, prod).  Must match number of config files/dirs.&#x27;, required=True)
+    parser.add_argument(&#x27;-r&#x27;, &#x27;--recursive&#x27;, action=&#x27;store_true&#x27;, help=&#x27;Recursively search directories for configuration files.&#x27;)
+    parser.add_argument(&#x27;-v&#x27;, &#x27;--verbose&#x27;, action=&#x27;store_true&#x27;, help=&#x27;Enable verbose logging.&#x27;)
+    parser.add_argument(&#x27;-t&#x27;, &#x27;--file-types&#x27;, nargs=&#x27;+&#x27;, default=[&#x27;.yml&#x27;, &#x27;.yaml&#x27;, &#x27;.json&#x27;], help=&#x27;File extensions to consider for configuration files (default: .yml .yaml .json)&#x27;)
+    parser.add_argument(&#x27;--ignore-patterns&#x27;, nargs=&#x27;+&#x27;, default=[], help=&#x27;List of patterns to ignore (e.g., *.log, temp*)&#x27;)
+    parser.add_argument(&#x27;--use-yamllint&#x27;, action=&#x27;store_true&#x27;, help=&#x27;Run yamllint on YAML files before hashing.&#x27;)
+    parser.add_argument(&#x27;--use-jsonlint&#x27;, action=&#x27;store_true&#x27;, help=&#x27;Run jsonlint on JSON files before hashing.&#x27;)
+
+
+    return parser
+
+def calculate_sha256_hash(filepath):</code></pre>
+  </section>
+      <section id="files">
+        <h2>The files that matter</h2>
+        <table><tr><th>File</th><th>Lines</th></tr>
+        <tr><td><code>main.py</code></td><td>202</td></tr>
+        <tr><td><code>README.md</code></td><td>23</td></tr>
+        <tr><td><code>requirements.txt</code></td><td>1</td></tr>
+        <tr><td><code>banner.png</code></td><td>0</td></tr>
+        <tr><td><code>logo.png</code></td><td>0</td></tr>
+        </table>
+        <p>Names doing the work: <span class="mono">setup_argparse, calculate_sha256_hash, process_file, process_directory, main</span>.</p>
+      </section>
+      <section id="sheets">
+        <h2>Drawn by hand</h2>
+        <p>I sketch my projects on notebook paper so I have to
+        understand them well enough to draw them. The full set,
+        with the counts and how they were counted, is the
+        <a href="https://github.com/ShadowGuard-AI/misconfig-configdriftdetector/tree/main/misconfig-configdriftdetector-Visuals">misconfig-configdriftdetector-Visuals</a>
+        folder in the repo. Nothing is drawn over the binder holes.
+        That is a rule, not a style.</p>
+        <div class="shots">
+          <img src="assets/architecture.png" alt="Hand drawn architecture sheet for Misconfig Configdriftdetector">
+          <img src="assets/flowchart.png" alt="Hand drawn flowchart sheet for Misconfig Configdriftdetector">
+          <img src="assets/product-map.png" alt="Hand drawn product map sheet for Misconfig Configdriftdetector">
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+<footer>
+  <p>Misconfig Configdriftdetector is one of my projects. This page was written
+  from the repo itself on 2026-10-30: the counts are the
+  repo's counts, the code is the repo's code, and the gaps are the
+  repo's gaps.</p>
+</footer>
+</body>
+</html>
