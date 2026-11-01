@@ -40,7 +40,16 @@ def calculate_sha256_hash(filepath):
     """
     try:
         with open(filepath, 'rb') as f:
+            # I read the file whole instead of feeding the hash in chunks.
+            # Config files are small enough that this costs nothing here,
+            # but the habit would not survive pointing this at a large file.
             file_content = f.read()
+            # The hash covers raw bytes, so this is byte drift, not meaning
+            # drift. A file that gains a trailing newline, or saves with
+            # different line endings, hashes differently from a parsed
+            # identical twin, and I report it. For config copied between
+            # machines by hand that strictness is the point, but nobody
+            # should read a drift report from me as a semantic difference.
             sha256_hash = hashlib.sha256(file_content).hexdigest()
             return sha256_hash
     except FileNotFoundError:
@@ -69,6 +78,12 @@ def process_file(filepath, use_yamllint=False, use_jsonlint=False):
             result = subprocess.run(['yamllint', filepath], capture_output=True, text=True)
             if result.returncode != 0:
                 logging.error(f"yamllint failed for {filepath}: {result.stderr}")
+                # A lint failure and an unreadable file both come back as None,
+                # and the caller drops None hashes without recording why. Below,
+                # in main, that file then looks exactly like a file that is
+                # absent from the environment, so a lint problem gets reported
+                # downstream as drift, or not reported at all if it fails in
+                # every environment the same way.
                 return None # Or raise an exception, depending on desired behavior
         elif filepath.endswith('.json') and use_jsonlint:
             logging.info(f"Running jsonlint on {filepath}")
@@ -118,6 +133,10 @@ def process_directory(directory, file_types, recursive=False, ignore_patterns=No
         for filename in files:
             if any(filename.endswith(ft) for ft in file_types):
                 filepath = os.path.join(root, filename)
+                # The relative path uses the separator of the machine running
+                # me. Two environments hashed on different operating systems
+                # would key the same nested file differently and report it
+                # missing from both sides.
                 relative_path = os.path.relpath(filepath, directory)
 
                 # Ignore patterns are globs, matched against the file name,
@@ -132,6 +151,10 @@ def process_directory(directory, file_types, recursive=False, ignore_patterns=No
                     hashes[relative_path] = file_hash
 
         if not recursive:
+            # os.walk yields the top level first, so breaking here is what
+            # non recursive means. Nothing sorts the walk, so the order
+            # files are hashed in is whatever the filesystem hands over,
+            # which only shows in the log, never in the result.
             break  # Only process the top-level directory
 
     return hashes
@@ -154,10 +177,18 @@ def main():
 
     environment_hashes = {}
     for config_path, env_name in zip(args.config_files, args.environments):
+        # Environment names are dictionary keys, so naming two paths
+        # with the same environment silently discards the first one's
+        # hashes when this line runs again. The count check in
+        # setup_argparse compares counts, not uniqueness.
         environment_hashes[env_name] = {}
         if os.path.isfile(config_path):
             # process single file, keyed by its bare file name so the same
             # file at a different path in another environment shares the key
+            # A path handed in as a single file bypasses the file types
+            # filter entirely. The extension list only governs directory
+            # walks, so an operator can hash a .txt file by naming it
+            # directly, deliberately or by accident.
             file_hash = process_file(config_path, args.use_yamllint, args.use_jsonlint)
             if file_hash:
                 environment_hashes[env_name][os.path.basename(config_path)] = file_hash
@@ -195,6 +226,10 @@ def main():
                     logging.warning(f"File {filepath} not found in environment {env}")
 
         # Compare hashes, ignoring missing files
+        # Expected, in the error below, means whichever environment
+        # was listed first among those that have the file. There is no
+        # canonical environment in my design; the first one just
+        # becomes the reference the others are wrong against.
         first_hash = next((h for h in hashes.values() if h is not None), None)
 
         if first_hash:
@@ -212,6 +247,10 @@ def main():
         logging.info("No configuration drift detected.")
 
     # Example Usage
+    # This block can never run from the command line: argparse
+    # above refuses a call with no arguments and exits before main
+    # gets here. The examples survive as documentation for anyone
+    # reading the file, which is the only place they are reachable.
     if not sys.argv[1:]: # check if no args passed
         print("\nUsage examples:")
         print("  # Compare two files:")
